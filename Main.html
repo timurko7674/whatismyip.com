@@ -26,7 +26,7 @@
             margin: 0;
             font-size: 2.5em;
         }
-        .ip-address, .ipv6-address, .gateway-address, .local-ip-address {
+        .ip-address, .ipv6-address, .gateway-address, .local-ip-address, .device-ip-address {
             font-size: 1.5em;
             margin-top: 10px;
             color: #ffeb3b;
@@ -44,6 +44,7 @@
         <div id="ipv6" class="loading">Loading IPv6...</div>
         <div id="local-ip" class="loading">Loading Local IP...</div>
         <div id="gateway" class="loading">Loading Router IP...</div>
+        <div id="device-ip" class="loading">Loading Device IP...</div>
     </div>
     <script>
         async function getIP() {
@@ -96,9 +97,42 @@
             document.getElementById('gateway').classList.add('gateway-address');
         }
 
+        function getDeviceIP() {
+            const deviceIP = new Promise((resolve, reject) => {
+                const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+                const rtc = new RTCPeerConnection({ iceServers: [] });
+                rtc.createDataChannel('');
+                rtc.createOffer()
+                    .then(offer => rtc.setLocalDescription(offer))
+                    .catch(error => reject(error));
+
+                rtc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        const candidate = event.candidate.candidate;
+                        const localIP = candidate.split(' ')[4];
+                        resolve(localIP);
+                        rtc.onicecandidate = null;
+                    }
+                };
+            });
+
+            deviceIP
+                .then((ip) => {
+                    document.getElementById('device-ip').innerText = 'Device IP Address: ' + ip;
+                    document.getElementById('device-ip').classList.remove('loading');
+                    document.getElementById('device-ip').classList.add('device-ip-address');
+                })
+                .catch((error) => {
+                    console.error('Failed to fetch device IP:', error);
+                    document.getElementById('device-ip').innerText = 'Unable to fetch Device IP address.';
+                });
+        }
+
+        // Call functions to fetch IP information
         getIP();
         getLocalIP();
         getRouterIP();
+        getDeviceIP();
     </script>
 </body>
 </html>
